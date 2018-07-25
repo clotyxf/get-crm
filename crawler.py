@@ -30,7 +30,7 @@ class Crawler:
             message_href = info_html.xpath('//a[contains(text(), "微信对话")]/@href')
             if len(message_href) > 0:
                 message_list += self.fetch_message(customer_id, message_href[0])
-            message_href = info_html.xpath('//a[contains(text(), "新版微信聊天记录")]/@href')
+            message_href = info_html.xpath('//a[contains(text(), "花镇客户通")]/@href')
             if len(message_href) > 0:
                 url = 'http://2.crm.huazhen.com' + message_href[0]
                 message_list += self.fetch_message(customer_id, url)
@@ -88,6 +88,8 @@ class Crawler:
                 if not img_src or img_src == 'null':
                     img_element.getparent().remove(img_element)
                 else:
+                    if not img_src.startswith('http'):
+                        img_src = 'http://2.crm.huazhen.com' + img_src
                     media_id = self.save_media(img_src)
                     img_element.set('src_id', str(media_id))
                     img_element.set('src', None)
@@ -160,8 +162,12 @@ class Crawler:
 
     def save_media(self, url):
         # print('    pulling media %s' % (url,))
-        r = requests.get(url, headers=self.headers)
-        id = self.db.save_media(r.content)
+        id = -1
+        try:
+            r = requests.get(url, headers=self.headers)
+            id = self.db.save_media(r.content)
+        except requests.exceptions.MissingSchema as e:
+            print(e.message)
         return id
 
 
