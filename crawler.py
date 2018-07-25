@@ -15,8 +15,33 @@ class Crawler:
 
     def run(self):
         start_index = self.db.customer_count()
-        for customer_id in self.customer_ids[start_index:]:
-            self.fetch_info(customer_id)
+        customer_ids = self.customer_ids[start_index:]
+        total = len(customer_ids)
+        for i, customer_id in enumerate(customer_ids):
+            print('[%d/%d] Pulling customer %s...' % (i+1, total, customer_id))
+
+            # fetch info
+            info_html, customer_info = self.fetch_info(customer_id)
+            print('Fetch info finish')
+
+            # fetch message
+            message_list = []
+            message_href = info_html.xpath('//a[contains(text(), "微信对话")]/@href')
+            if len(message_href) > 0:
+                message_list += self.fetch_message(customer_id, message_href[0])
+            message_href = info_html.xpath('//a[contains(text(), "新版微信聊天记录")]/@href')
+            if len(message_href) > 0:
+                url = 'http://2.crm.huazhen.com' + message_href[0]
+                message_list += self.fetch_message(customer_id, url)
+            print('Fetch message finish')
+
+            # save
+            self.db.save_info(**customer_info)
+            for message in message_list:
+                self.db.save_message(**message)
+            print('Save finish, done')
+
+        print('All done!!')
 
     def fetch_info(self, customer_id):
         r = requests.get('http://2.crm.huazhen.com/sells/%s' % (customer_id,),
@@ -68,15 +93,70 @@ class Crawler:
 
             achieves += element_to_string(achieves_element)
 
-        self.db.save_info(id=customer_id,
-                     name=name,
-                     remarks=remarks,
-                     achieves=achieves)
-        print('Customer %s %s fetched.' % (customer_id, name))
-        input('pause')
+        customer_info =  {
+            'id': customer_id,
+            'name': name,
+            'remarks': remarks,
+            'achieves': achieves,
+        }
+        return html, customer_info
+
+    def fetch_message(self, customer_id, url, will_fetch_others=True):
+        if not url.startswith('http'):
+            url = 'http://2.crm.huazhen.com' + url
+        r = requests.get(url, headers = self.headers)
+        html = fromstring(r.text)
+
+        # name
+        tab_button_xpath = '/html/body/div[1]/div/section[2]/div/div'
+        name = html.xpath(tab_button_xpath + '/a[contains(@class, "btn-primary")]/text()')[0]
+
+        # content
+        content = ''
+        message_elements = html.xpath('//div[contains(@class, "direct-chat-text")]')
+        for element in message_elements:
+            parent_class = element.getparent().get('class')
+            if parent_class.find('direct-chat-msg') > 0 and parent_class.find('right') > 0:
+                content += '<div class="right">'
+            else:
+                content += '<div>'
+
+            children = element.getchildren()
+            if len(children) > 0:
+                e = children[0]
+                src = e.get('src', 'null')
+                if not src or src == 'null':
+                    e.getparent().remove(e)
+                else:
+                    media_id = self.save_media(src)
+                    e.set('src_id', str(media_id))
+                    e.set('src', None)
+                    content += element_to_string(e)
+            else:
+                content += element.text.strip()
+
+            content += '</div>'
+
+        if will_fetch_others:
+            message_list = []
+            message_list.append({
+                'customer_id': customer_id,
+                'counselor_name': name,
+                'content': content,
+            })
+            counselor_hrefs = html.xpath(tab_button_xpath + '/a/@href')
+            for href in counselor_hrefs[1:]:
+                m = self.fetch_message(customer_id, href, False)
+                message_list.append(m)
+            return message_list
+        else:
+            return {
+                'customer_id': customer_id,
+                'counselor_name': name,
+                'content': content,
+            }
 
     def save_media(self, url):
-        print(url)
         r = requests.get(url, headers=self.headers)
         id = self.db.save_media(r.content)
         return id

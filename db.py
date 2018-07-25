@@ -3,6 +3,7 @@ import sqlite3
 
 class Db:
     db_name = 'data.db'
+    # db_name = ':memory:'
 
     def __init__(self):
         self.conn = sqlite3.connect(self.db_name)
@@ -22,10 +23,13 @@ class Db:
         self.cursor.execute('''
                        create table if not exists wechat_message
                        (
-                       custormer_id int primary key not null,
-                       counselor_name varchar(30),
+                       customer_id varchar(15) not null,
+                       counselor_name varchar(30) not null,
                        content text
                        );
+        ''')
+        self.cursor.execute('''
+                       create index customer_id on wechat_message(customer_id)
         ''')
         self.cursor.execute('''
                        create table if not exists media
@@ -41,7 +45,6 @@ class Db:
         count = self.cursor.fetchone()[0]
         return count
 
-
     def save_media(self, content):
         self.cursor.execute('insert into media(data) values (?)',
                             (content,))
@@ -51,4 +54,9 @@ class Db:
     def save_info(self, id, name, remarks, achieves):
         self.cursor.execute('insert into customer_info(id, name, remarks, achives) values (?,?,?,?)',
                             (id, name, remarks, achieves))
+        self.conn.commit()
+
+    def save_message(self, customer_id, counselor_name, content):
+        self.cursor.execute('insert into wechat_message(customer_id, counselor_name, content) values (?,?,?)',
+                            (customer_id, counselor_name, content))
         self.conn.commit()
