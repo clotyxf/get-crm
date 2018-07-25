@@ -1,0 +1,5 @@
+data.db
+customer_ids
+*.pyc
+*.swp
+.DS_Store
