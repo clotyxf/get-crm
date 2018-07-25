@@ -29,7 +29,7 @@ class Db:
                        );
         ''')
         self.cursor.execute('''
-                       create index customer_id on wechat_message(customer_id)
+                       create index if not exists customer_id on wechat_message(customer_id)
         ''')
         self.cursor.execute('''
                        create table if not exists media

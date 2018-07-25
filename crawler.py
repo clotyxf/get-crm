@@ -21,10 +21,11 @@ class Crawler:
             print('[%d/%d] Pulling customer %s...' % (i+1, total, customer_id))
 
             # fetch info
+            print('Fetch info...')
             info_html, customer_info = self.fetch_info(customer_id)
-            print('Fetch info finish')
 
             # fetch message
+            print('Fetch message...')
             message_list = []
             message_href = info_html.xpath('//a[contains(text(), "微信对话")]/@href')
             if len(message_href) > 0:
@@ -33,13 +34,13 @@ class Crawler:
             if len(message_href) > 0:
                 url = 'http://2.crm.huazhen.com' + message_href[0]
                 message_list += self.fetch_message(customer_id, url)
-            print('Fetch message finish')
 
             # save
+            print('Saving to database...')
             self.db.save_info(**customer_info)
             for message in message_list:
                 self.db.save_message(**message)
-            print('Save finish, done')
+            print('done.')
 
         print('All done!!')
 
@@ -110,6 +111,7 @@ class Crawler:
         # name
         tab_button_xpath = '/html/body/div[1]/div/section[2]/div/div'
         name = html.xpath(tab_button_xpath + '/a[contains(@class, "btn-primary")]/text()')[0]
+        print('  with %s' % (name,))
 
         # content
         content = ''
@@ -157,6 +159,7 @@ class Crawler:
             }
 
     def save_media(self, url):
+        # print('    pulling media %s' % (url,))
         r = requests.get(url, headers=self.headers)
         id = self.db.save_media(r.content)
         return id
