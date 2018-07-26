@@ -112,7 +112,11 @@ class Crawler:
 
         # name
         tab_button_xpath = '/html/body/div[1]/div/section[2]/div/div'
-        name = html.xpath(tab_button_xpath + '/a[contains(@class, "btn-primary")]/text()')[0]
+        name_list = html.xpath(tab_button_xpath + '/a[contains(@class, "btn-primary")]/text()')
+        if len(name_list) > 0:
+            name = name_list[0]
+        else:
+            name = html.xpath(tab_button_xpath + '/a/text()')[0]
         print('  with %s' % (name,))
 
         # content
