@@ -1,7 +1,8 @@
+import re
+
 import requests
 from lxml import etree
 from lxml.html.soupparser import fromstring
-
 
 from db import Db
 
@@ -47,7 +48,7 @@ class Crawler:
     def fetch_info(self, customer_id):
         r = requests.get('http://2.crm.huazhen.com/sells/%s' % (customer_id,),
                          headers = self.headers)
-        html = fromstring(r.text)
+        html = string_to_html(r.text)
 
         # name
         name_raw = pick_up_value(html, '/html/body/div[1]/div[1]/section[2]/div[1]/div[2]/div/div/div[1]/div[2]/text()')
@@ -108,7 +109,7 @@ class Crawler:
         if not url.startswith('http'):
             url = 'http://2.crm.huazhen.com' + url
         r = requests.get(url, headers = self.headers)
-        html = fromstring(r.text)
+        html = string_to_html(r.text)
 
         # name
         tab_button_xpath = '/html/body/div[1]/div/section[2]/div/div'
@@ -165,7 +166,7 @@ class Crawler:
             }
 
     def save_media(self, url):
-        # print('    pulling media %s' % (url,))
+        print('    pulling media %s' % (url,))
         id = -1
         try:
             r = requests.get(url, headers=self.headers)
@@ -187,3 +188,9 @@ def pick_up_element(html, xpath):
 
 def element_to_string(element):
     return etree.tostring(element, encoding='utf-8').decode('utf-8')
+
+
+def string_to_html(string):
+    string = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', string)
+    return fromstring(string)
+

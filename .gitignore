@@ -3,6 +3,6 @@
 .DS_Store
 
 data.db
-customer_ids
+customer_ids*
 token
 
