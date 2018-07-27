@@ -1,12 +1,10 @@
 import sqlite3
 
+from settings import SETTINGS
 
 class Db:
-    db_name = 'data.db'
-    # db_name = ':memory:'
-
     def __init__(self):
-        self.conn = sqlite3.connect(self.db_name)
+        self.conn = sqlite3.connect(SETTINGS['db_name'])
         self.cursor = self.conn.cursor()
         self.create_table()
 

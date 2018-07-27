@@ -5,6 +5,7 @@ from lxml import etree
 from lxml.html.soupparser import fromstring
 
 from db import Db
+from settings import SETTINGS
 
 
 class Crawler:
@@ -26,15 +27,16 @@ class Crawler:
             info_html, customer_info = self.fetch_info(customer_id)
 
             # fetch message
-            print('Fetch message...')
             message_list = []
-            message_href = info_html.xpath('//a[contains(text(), "微信对话")]/@href')
-            if len(message_href) > 0:
-                message_list += self.fetch_message(customer_id, message_href[0])
-            message_href = info_html.xpath('//a[contains(text(), "花镇客户通")]/@href')
-            if len(message_href) > 0:
-                url = 'http://2.crm.huazhen.com' + message_href[0]
-                message_list += self.fetch_message(customer_id, url)
+            if SETTINGS['fetch_message_and_media']:
+                print('Fetch message...')
+                message_href = info_html.xpath('//a[contains(text(), "微信对话")]/@href')
+                if len(message_href) > 0:
+                    message_list += self.fetch_message(customer_id, message_href[0])
+                message_href = info_html.xpath('//a[contains(text(), "花镇客户通")]/@href')
+                if len(message_href) > 0:
+                    url = 'http://2.crm.huazhen.com' + message_href[0]
+                    message_list += self.fetch_message(customer_id, url)
 
             # save
             print('Saving to database...')
@@ -82,6 +84,8 @@ class Crawler:
         # achieves
         achieves = ''
         achieves_list = html.xpath('//div[@id="emotion_show"]/div[@class="box-body"]/div/div[contains(@class, "panel-body")]')
+        if len(achieves_list) <= 0:
+            input('warning! no data found. please check and continue')
         for achieves_element in achieves_list:
             # save media
             for img_element in achieves_element.xpath('.//img'):
@@ -166,6 +170,9 @@ class Crawler:
             }
 
     def save_media(self, url):
+        if not SETTINGS['fetch_message_and_media']:
+            return -1
+
         print('    pulling media %s' % (url,))
         id = -1
         try:
